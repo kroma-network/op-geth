@@ -374,6 +374,11 @@ type ChainConfig struct {
 
 	// Optimism config, nil if not active
 	Optimism *OptimismConfig `json:"optimism,omitempty"`
+
+	// [Kroma: START]
+	// This value indicates whether the genesis was created using ZKTrie.
+	Zktrie bool `json:"zktrie"`
+	// [Kroma: END]
 }
 
 // EthashConfig is the consensus engine configs for proof-of-work based sealing.

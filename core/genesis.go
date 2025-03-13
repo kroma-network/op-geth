@@ -25,6 +25,7 @@ import (
 	"strings"
 
 	"github.com/ethereum-optimism/superchain-registry/superchain"
+	zkt "github.com/kroma-network/zktrie/types"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -353,8 +354,12 @@ func SetupGenesisBlockWithOverride(db ethdb.Database, triedb *triedb.Database, g
 	// sync without an existing datadir) & even if it were, would not be useful as op-geth is not able to
 	// execute the pre-bedrock STF.
 	header := rawdb.ReadHeader(db, stored, 0)
+	// [Kroma: START]
+	// Since the ZKTrie stores hashes in reverse order, ensure that it has been initialized.
+	zkInitialized := triedb.Initialized(common.BytesToHash(zkt.ReverseByteOrder(header.Root[:])))
+	// [Kroma: END]
 	transitionedNetwork := genesis != nil && genesis.Config != nil && genesis.Config.BedrockBlock != nil && genesis.Config.BedrockBlock.Uint64() != 0
-	if header.Root != types.EmptyRootHash && !triedb.Initialized(header.Root) && !transitionedNetwork {
+	if header.Root != types.EmptyRootHash && !triedb.Initialized(header.Root) && !transitionedNetwork && !zkInitialized {
 		if genesis == nil {
 			genesis = DefaultGenesisBlock()
 		}
@@ -487,6 +492,13 @@ func (g *Genesis) IsVerkle() bool {
 
 // ToBlock returns the genesis block according to genesis specification.
 func (g *Genesis) ToBlock() *types.Block {
+	// [Kroma: START]
+	hashAlloc := hashAlloc
+	if g.Config.Zktrie {
+		hashAlloc = hashAllocZk
+	}
+	// [Kroma: END]
+
 	var root common.Hash
 	var err error
 	if g.StateHash != nil {
@@ -566,6 +578,13 @@ func (g *Genesis) toBlockWithRoot(root common.Hash) *types.Block {
 // Commit writes the block and state of a genesis specification to the database.
 // The block is committed as the canonical head block.
 func (g *Genesis) Commit(db ethdb.Database, triedb *triedb.Database) (*types.Block, error) {
+	// [Kroma: START]
+	flushAlloc := flushAlloc
+	if g.Config.Zktrie {
+		flushAlloc = flushAllocZk
+	}
+	// [Kroma: END]
+
 	if g.Number != 0 {
 		return nil, errors.New("can't commit genesis block with number > 0")
 	}
