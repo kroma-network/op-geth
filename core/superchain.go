@@ -22,7 +22,14 @@ func LoadOPStackGenesis(chainID uint64) (*Genesis, error) {
 		return nil, fmt.Errorf("failed to load params.ChainConfig for chain %d: %w", chainID, err)
 	}
 
-	gen, err := superchain.LoadGenesis(chainID)
+	// [Kroma: START]
+	var gen *superchain.Genesis
+	if params.IsKromaChain(chainID) {
+		gen, err = LoadKromaGenesis(chainID)
+	} else {
+		gen, err = superchain.LoadGenesis(chainID)
+	}
+	// [Kroma: END]
 	if err != nil {
 		return nil, fmt.Errorf("failed to load genesis definition for chain %d: %w", chainID, err)
 	}
@@ -79,6 +86,18 @@ func LoadOPStackGenesis(chainID uint64) (*Genesis, error) {
 		genesis.StateHash = (*common.Hash)(gen.StateHash)
 		genesis.Alloc = nil
 	}
+
+	// [Kroma: START]
+	// LoadKromaGenesis does not include alloc, so load it directly here.
+	if len(genesis.Alloc) == 0 && params.IsKromaChain(chainID) {
+		alloc := LoadKromaGenesisAlloc(chainID)
+		if alloc != nil {
+			genesis.Alloc = alloc
+		} else {
+			return nil, fmt.Errorf("failed to load kroma genesis alloc for chain %d", chainID)
+		}
+	}
+	// [Kroma: END]
 
 	genesisBlock := genesis.ToBlock()
 	genesisBlockHash := genesisBlock.Hash()

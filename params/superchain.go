@@ -8,12 +8,19 @@ import (
 	"strings"
 
 	"github.com/ethereum-optimism/superchain-registry/superchain"
+
 	"github.com/ethereum/go-ethereum/common"
 )
 
 var OPStackSupport = ProtocolVersionV0{Build: [8]byte{}, Major: 9, Minor: 0, Patch: 0, PreRelease: 0}.Encode()
 
 func init() {
+	// [Kroma: START]
+	for id, ch := range KromaChains {
+		superchain.OPChains[id] = ch
+	}
+	// [Kroma: END]
+
 	for id, ch := range superchain.OPChains {
 		NetworkNames[fmt.Sprintf("%d", id)] = ch.Name
 	}
@@ -102,6 +109,20 @@ func LoadOPStackChainConfig(chainID uint64) (*ChainConfig, error) {
 		out.MergeNetsplitBlock = big.NewInt(105235063)
 		out.BedrockBlock = big.NewInt(105235063)
 	}
+	// [Kroma: START]
+	// special overrides for Kroma chains with pre-KromaMPT upgrade history
+	switch chainID {
+	case KromaMainnetChainID:
+		out.Zktrie = true
+		out.BedrockBlock = big.NewInt(KromaMainnetBedrockBlock)
+	case KromaSepoliaChainID:
+		out.Zktrie = true
+		out.BedrockBlock = big.NewInt(KromaSepoliaBedrockBlock)
+	case KromaDevnetChainID:
+		out.Zktrie = true
+		out.BedrockBlock = big.NewInt(KromaDevnetBedrockBlock)
+	}
+	// [Kroma: END]
 
 	return out, nil
 }

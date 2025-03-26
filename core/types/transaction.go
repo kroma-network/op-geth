@@ -219,6 +219,11 @@ func (tx *Transaction) decodeTyped(b []byte) (TxData, error) {
 		inner = new(BlobTx)
 	case DepositTxType:
 		inner = new(DepositTx)
+		// [Kroma: START]
+		if isKromaDepTx, _ := IsKromaLegacyDepositTx(b[1:]); isKromaDepTx {
+			inner = new(KromaLegacyDepositTx)
+		}
+		// [Kroma: END]
 	default:
 		return nil, ErrTxTypeNotSupported
 	}
@@ -345,6 +350,8 @@ func (tx *Transaction) SourceHash() common.Hash {
 		return tx.inner.(*DepositTx).SourceHash
 	case *depositTxWithNonce:
 		return tx.inner.(*depositTxWithNonce).SourceHash
+	case *KromaLegacyDepositTx:
+		return tx.inner.(*KromaLegacyDepositTx).SourceHash
 	}
 	return common.Hash{}
 }
@@ -357,6 +364,8 @@ func (tx *Transaction) Mint() *big.Int {
 		return tx.inner.(*DepositTx).Mint
 	case *depositTxWithNonce:
 		return tx.inner.(*depositTxWithNonce).Mint
+	case *KromaLegacyDepositTx:
+		return tx.inner.(*KromaLegacyDepositTx).Mint
 	}
 	return nil
 }
